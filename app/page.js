@@ -87,7 +87,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center">
       <GoogleAnalytics trackPageViews />
-      <h1 className="text-4xl font-extrabold mb-8 text-gray-100">🎵 MicDrop</h1>
+      <h1 className="text-4xl font-extrabold mb-8 text-gray-100">🎵 StarryOke</h1>
 
       <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-lg p-6">
         <label htmlFor="youtubeUrl" className="block text-lg font-medium text-gray-300 mb-2">
