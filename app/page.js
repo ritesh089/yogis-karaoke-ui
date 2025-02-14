@@ -6,12 +6,16 @@ import { GoogleAnalytics, event } from 'nextjs-google-analytics';
 
 export default function Home() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isKaraokeReady, setIsKaraokeReady] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
   const audioRef = useRef(null);
+
+  const YOUTUBE_API_KEY = 'YOUR_YOUTUBE_API_KEY_HERE'; // Replace with your API key
 
   useEffect(() => {
     // Track page view on load
@@ -20,6 +24,23 @@ export default function Home() {
       label: 'Home Page',
     });
   }, []);
+
+  const handleSearchYouTube = async () => {
+    if (!searchQuery) return;
+    try {
+      const response = await axios.get(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=video&key=${YOUTUBE_API_KEY}`
+      );
+      setSearchResults(response.data.items);
+    } catch (err) {
+      console.error('YouTube search failed:', err);
+    }
+  };
+
+  const handleSelectVideo = (videoId) => {
+    setYoutubeUrl(`https://www.youtube.com/watch?v=${videoId}`);
+    setSearchResults([]); // Clear the search results after selection
+  };
 
   const handleGenerateKaraoke = async () => {
     setIsLoading(true);
@@ -44,54 +65,57 @@ export default function Home() {
     }
   };
 
-  const handlePlayAudio = async () => {
-    setIsBuffering(true);
-    try {
-      const response = await axios.get(`/api/karaoke?url=${encodeURIComponent(youtubeUrl)}&type=karaoke`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      setAudioUrl(url);
-      audioRef.current.src = url;
-      audioRef.current.play().catch(() => setError('Failed to play the audio.'));
-      event('play_audio', {
-        category: 'Audio',
-        label: 'Karaoke Playback',
-      });
-    } catch (err) {
-      setError('Failed to play the audio.');
-    } finally {
-      setIsBuffering(false);
-    }
-  };
-
-  const handleDownloadAudio = async () => {
-    if (audioUrl) {
-      try {
-        const response = await axios.get(`/api/karaoke?url=${encodeURIComponent(youtubeUrl)}&type=karaoke`, {
-          responseType: 'blob',
-        });
-        const blob = new Blob([response.data], { type: 'audio/mp3' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'karaoke_audio.mp3';
-        link.click();
-        window.URL.revokeObjectURL(url);
-      } catch (err) {
-        setError('Failed to download the audio.');
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center">
       <GoogleAnalytics trackPageViews />
-      <h1 className="text-4xl font-extrabold mb-8 text-gray-100">🎵 MicDrop</h1>
+      <h1 className="text-4xl font-extrabold mb-8 text-gray-100">🎵 YouTube Karaoke Generator</h1>
 
       <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-lg p-6">
+        <label htmlFor="searchQuery" className="block text-lg font-medium text-gray-300 mb-2">
+          Search YouTube:
+        </label>
+        <div className="flex space-x-2 mb-4">
+          <input
+            type="text"
+            id="searchQuery"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Enter song name"
+            className="flex-1 p-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-100 focus:outline-none"
+          />
+          <button
+            onClick={handleSearchYouTube}
+            className="px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg text-white font-bold"
+          >
+            Search
+          </button>
+        </div>
+
+        {searchResults.length > 0 && (
+          <div className="bg-gray-700 p-4 rounded-lg mb-4">
+            <h3 className="text-lg font-semibold text-gray-100 mb-2">Select a Video:</h3>
+            <ul className="space-y-2">
+              {searchResults.map((video) => (
+                <li key={video.id.videoId}>
+                  <button
+                    onClick={() => handleSelectVideo(video.id.videoId)}
+                    className="block text-left w-full p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-100"
+                  >
+                    <img
+                      src={video.snippet.thumbnails.default.url}
+                      alt={video.snippet.title}
+                      className="inline-block w-16 h-9 mr-2"
+                    />
+                    {video.snippet.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <label htmlFor="youtubeUrl" className="block text-lg font-medium text-gray-300 mb-2">
-          Enter YouTube URL:
+          Selected YouTube URL:
         </label>
         <input
           type="text"
@@ -99,49 +123,18 @@ export default function Home() {
           value={youtubeUrl}
           onChange={(e) => setYoutubeUrl(e.target.value)}
           placeholder="https://www.youtube.com/watch?v=G7KNmW9a75Y"
-          className="w-full p-3 border border-gray-700 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-800 text-gray-100"
+          className="w-full p-3 border border-gray-700 rounded-lg mb-4 bg-gray-800 text-gray-100 focus:outline-none"
         />
 
         <button
           onClick={handleGenerateKaraoke}
           disabled={isLoading}
-          className={`w-full py-3 rounded-lg text-white font-bold ${
-            isLoading ? 'bg-gray-700 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-500'
-          }`}
+          className={`w-full py-3 rounded-lg text-white font-bold ${isLoading ? 'bg-gray-700 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-500'}`}
         >
           {isLoading ? 'Processing...' : isKaraokeReady ? 'Regenerate Karaoke' : 'Generate Karaoke'}
         </button>
 
         {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
-
-        {isKaraokeReady && (
-          <div className="mt-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-200">Your Karaoke is Ready:</h2>
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <div className="relative flex flex-col items-center space-y-4">
-                {isBuffering ? (
-                  <div className="loader w-12 h-12 border-4 border-t-transparent border-gray-100 rounded-full animate-spin"></div>
-                ) : (
-                  <button
-                    onClick={handlePlayAudio}
-                    className="w-full py-3 rounded-lg text-gray-100 font-bold bg-gray-700 hover:bg-gray-600 flex items-center justify-center"
-                  >
-                    Play Karaoke
-                  </button>
-                )}
-                <div className="w-full mt-4 p-4 bg-gray-900 rounded-lg">
-                  <audio ref={audioRef} controls className="w-full appearance-none bg-gray-950 text-gray-100 rounded-lg" />
-                  <button
-                    onClick={handleDownloadAudio}
-                    className="mt-4 py-2 px-4 rounded-lg bg-gray-700 text-gray-100 hover:bg-gray-600 font-bold w-full"
-                  >
-                    Download Audio
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
