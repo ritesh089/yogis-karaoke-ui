@@ -1,16 +1,16 @@
 version: '3.8'
 services:
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: ritesh089/yogis-karaoke-ui:latest
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NEXT_PUBLIC_BACKEND_URL=http://backend:8080
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ritesh089/yogis-karaoke-ui:1.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8080
+    depends_on:
+      - backend
 
   backend:
     image: karaoke-app # Replace with your backend image name

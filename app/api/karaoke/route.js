@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 
 export async function GET(request) {
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
 
@@ -11,7 +12,7 @@ export async function GET(request) {
   }
 
   try {
-    const response = await axios.get(`http://localhost:8080/karaoke`, {
+    const response = await axios.get(`${BACKEND_URL}/karaoke`, {
       params: { url },
       responseType: 'stream', // Return the audio file as a stream
     });
